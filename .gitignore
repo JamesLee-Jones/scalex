@@ -2,3 +2,6 @@
 .bsp
 .scala-build
 
+# intellij files
+.idea
+target

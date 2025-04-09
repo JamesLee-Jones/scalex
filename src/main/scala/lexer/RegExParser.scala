@@ -8,13 +8,13 @@ object RegExParser {
     char == '|' || char == '(' || char == ')'
   }
 
-  def parseToNFA(regEx: String): Automata = {
+  def parseToNFA(regEx: String): NFA = {
     // TODO: This could probably be abstracted
     if (regEx.isEmpty) {
-      return Automata.empty()
+      return NFA.empty()
     }
 
-    val automataStack : mutable.Stack[Automata] = mutable.Stack()
+    val automataStack : mutable.Stack[NFA] = mutable.Stack()
     val operatorStack : mutable.Stack[Char] = mutable.Stack()
 
     for (c <- regEx) {
@@ -35,7 +35,7 @@ object RegExParser {
 
         case '*' =>
           if (automataStack.isEmpty) throw new Error()
-          automataStack.push(Automata.repeat(automataStack.pop()))
+          automataStack.push(NFA.repeat(automataStack.pop()))
 
         case _ =>
           if (automataStack.size >= 2)  {
@@ -43,7 +43,7 @@ object RegExParser {
             val first = automataStack.pop()
             automataStack.push(first ~> second)
           }
-          automataStack.push(Automata.const(c))
+          automataStack.push(NFA.const(c))
       }
     }
 
@@ -59,9 +59,4 @@ object RegExParser {
     automataStack.top
   }
 
-}
-
-
-@main def main(): Unit = {
-  RegExParser.parseToNFA("(a|b)*").printTransitions()
 }

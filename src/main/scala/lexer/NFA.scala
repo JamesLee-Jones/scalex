@@ -23,51 +23,51 @@ class State(var transitions: Map[Option[Char], Set[State]] = Map.empty) {
   }
 }
 
-object Automata {
-  def empty(): Automata = {
+object NFA {
+  def empty(): NFA = {
     val start = State()
     val end = State()
     start.addTransition(epsilon, start)
-    Automata(start, Set(end))
+    NFA(start, Set(end))
   }
 
-  def const(char: Char): Automata = {
+  def const(char: Char): NFA = {
     val start: State = new State()
     val end = new State()
     start.addTransition(char, end)
-    Automata(start, Set(end))
+    NFA(start, Set(end))
   }
 
-  def repeat(automata: Automata): Automata = {
+  def repeat(automata: NFA): NFA = {
     val first = new State()
     val last = new State()
     first.addTransition(epsilon, automata.initial)
     first.addTransition(epsilon, last)
     automata.accept.foreach(state => state.addTransition(epsilon, last))
     automata.accept.foreach(state => state.addTransition(epsilon, automata.initial))
-    Automata(first, Set(last))
+    NFA(first, Set(last))
   }
 }
 
-class Automata(val initial: State, var accept: Set[State]) {
-  def ~>(that: Char): Automata = {
-    val automata = Automata.const(that)
+class NFA(val initial: State, var accept: Set[State]) {
+  def ~>(that: Char): NFA = {
+    val automata = NFA.const(that)
     ~>(automata)
   }
 
-  def ~>(that: Automata): Automata = {
+  def ~>(that: NFA): NFA = {
     this.accept.foreach(state => state.addTransition(epsilon, that.initial))
-    Automata(this.initial, that.accept)
+    NFA(this.initial, that.accept)
   }
 
-  def <|>(that: Automata): Automata = {
+  def <|>(that: NFA): NFA = {
     val first = new State()
     first.addTransition(epsilon, this.initial)
     first.addTransition(epsilon, that.initial)
     val last = new State()
     this.accept.foreach(state => state.addTransition(epsilon, last))
     that.accept.foreach(state => state.addTransition(epsilon, last))
-    Automata(first, Set(last))
+    NFA(first, Set(last))
   }
 
   def transitionCount(): Int = {

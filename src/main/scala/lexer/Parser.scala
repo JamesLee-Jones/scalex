@@ -6,14 +6,16 @@ object Parser {
   def parse(tokens: List[Token]): RegEx = {
     if (tokens.isEmpty) return Emp
 
-    val regexpStack : mutable.Stack[RegEx] = mutable.Stack()
-    val operatorStack : mutable.Stack[Token] = mutable.Stack()
+    val regexpStack: mutable.Stack[RegEx] = mutable.Stack()
+    val operatorStack: mutable.Stack[Token] = mutable.Stack()
     var current: Option[RegEx] = None
 
     for (t <- tokens) {
-      if ((t == TAlternation || t == TRightBracket) &&
-          operatorStack.nonEmpty &&
-          operatorStack.top == TAlternation) {
+      if (
+        (t == TAlternation || t == TRightBracket) &&
+        operatorStack.nonEmpty &&
+        operatorStack.top == TAlternation
+      ) {
         if (regexpStack.isEmpty || current.isEmpty) throw new Error()
         operatorStack.pop()
         current = Some(Alt(regexpStack.pop(), current.get))
@@ -28,8 +30,8 @@ object Parser {
           }
 
         case TRightBracket =>
-          if (operatorStack.isEmpty || operatorStack.pop() != TLeftBracket) throw new Error()
-
+          if (operatorStack.isEmpty || operatorStack.pop() != TLeftBracket)
+            throw new Error()
 
         case TAlternation =>
           if (current.isEmpty) throw new Error()
@@ -40,7 +42,8 @@ object Parser {
         case TClosure =>
           // TODO: This can be abstracted
           current = Some(current match {
-            case Some(Sequence(regExs)) => Sequence(regExs.updated(regExs.size-1, Star(regExs.last)))
+            case Some(Sequence(regExs)) =>
+              Sequence(regExs.updated(regExs.size - 1, Star(regExs.last)))
             case Some(regex) => Star(regex)
             case _           => throw new Error()
           })
@@ -49,7 +52,7 @@ object Parser {
           // TODO: Factor this out
           current = Some(current match {
             case Some(regex) => regex ~> Ch(char)
-            case _ => Ch(char)
+            case _           => Ch(char)
           })
       }
     }
@@ -57,7 +60,8 @@ object Parser {
     if (current.nonEmpty) regexpStack.push(current.get)
 
     while (operatorStack.nonEmpty) {
-      if (operatorStack.top != TAlternation || regexpStack.size < 2) throw new Error()
+      if (operatorStack.top != TAlternation || regexpStack.size < 2)
+        throw new Error()
       operatorStack.pop()
       val second = regexpStack.pop()
       regexpStack.push(Alt(regexpStack.pop(), second))

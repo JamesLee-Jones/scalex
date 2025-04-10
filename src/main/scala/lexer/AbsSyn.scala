@@ -35,12 +35,11 @@ object RegEx {
         sb.append('*')
 
       case Sequence(regExprs) =>
-        regExprs.foreach { regExpr => prettyPrint(regExpr, sb)}
+        regExprs.foreach { regExpr => prettyPrint(regExpr, sb) }
       case Emp =>
     }
     sb.append(')')
   }
-
 
 }
 
@@ -53,7 +52,7 @@ extension (regex: RegEx)
       case _ =>
         that match {
           case Sequence(regexes) => Sequence(regexes.prepended(regex))
-          case _ => Sequence(Vector.apply(regex, that))
+          case _                 => Sequence(Vector.apply(regex, that))
         }
     }
   }

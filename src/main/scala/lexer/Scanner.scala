@@ -10,7 +10,6 @@ case object TLeftBracket extends Token
 case object TRightBracket extends Token
 case class TChar(char: Char) extends Token
 
-
 object Scanner {
   def scan(regex: String): List[Token] = {
     val result = ListBuffer[Token]()
@@ -21,7 +20,7 @@ object Scanner {
         case '|' => TAlternation
         case '(' => TLeftBracket
         case ')' => TRightBracket
-        case c => TChar(c)
+        case c   => TChar(c)
       })
     }
     result.toList

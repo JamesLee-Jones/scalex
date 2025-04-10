@@ -10,24 +10,24 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Setup Scala
         uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: '21'
           cache: 'sbt'
-      - uses: actions/checkout@v2
       - name: Run tests
         run: sbt test
   lint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Setup Scala
         uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: '21'
           cache: 'sbt'
-      - uses: actions/checkout@v2
       - name: Formatting
         run: sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck

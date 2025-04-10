@@ -1,8 +1,14 @@
 class ScanTest
 
 import org.scalatest.flatspec.AnyFlatSpec
-import lexer.{Scanner, TAlternation, TChar, TClosure, TLeftBracket, TRightBracket}
-
+import lexer.{
+  Scanner,
+  TAlternation,
+  TChar,
+  TClosure,
+  TLeftBracket,
+  TRightBracket
+}
 
 class ScannerFlatSpec extends AnyFlatSpec {
   "Empty regex" should "produce an empty list of tokens" in {
@@ -33,7 +39,15 @@ class ScannerFlatSpec extends AnyFlatSpec {
 
   "Consecutive tokens" should "be converted correctly" in {
     assert(Scanner.scan("a*b") == List(TChar('a'), TClosure, TChar('b')))
-    assert(Scanner.scan("(a)*b") == List(TLeftBracket, TChar('a'), TRightBracket, TClosure, TChar('b')))
+    assert(
+      Scanner.scan("(a)*b") == List(
+        TLeftBracket,
+        TChar('a'),
+        TRightBracket,
+        TClosure,
+        TChar('b')
+      )
+    )
   }
 
   "White space" should "be ignored" in {

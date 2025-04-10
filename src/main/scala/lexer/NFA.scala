@@ -13,12 +13,13 @@ object UniqueIdGenerator {
 class State(var transitions: Map[Option[Char], Set[State]] = Map.empty) {
   val id: Int = UniqueIdGenerator.nextId()
 
-  def addTransition(input: Char, state: State): Unit = addTransition(Some(input), state)
+  def addTransition(input: Char, state: State): Unit =
+    addTransition(Some(input), state)
 
   def addTransition(input: Option[Char], state: State): Unit = {
     transitions = transitions.updatedWith(input) {
-      case Some(states)  => Some(states + state)
-      case None          => Some(Set(state))
+      case Some(states) => Some(states + state)
+      case None         => Some(Set(state))
     }
   }
 }
@@ -44,7 +45,9 @@ object NFA {
     first.addTransition(epsilon, automata.initial)
     first.addTransition(epsilon, last)
     automata.accept.foreach(state => state.addTransition(epsilon, last))
-    automata.accept.foreach(state => state.addTransition(epsilon, automata.initial))
+    automata.accept.foreach(state =>
+      state.addTransition(epsilon, automata.initial)
+    )
     NFA(first, Set(last))
   }
 }
@@ -105,7 +108,7 @@ class NFA(val initial: State, var accept: Set[State]) {
 
     while (queue.nonEmpty) {
       val state = queue.dequeue()
-      state.transitions.foreach {(char, nextStates) =>
+      state.transitions.foreach { (char, nextStates) =>
         val label = char.map(_.toString).getOrElse("ε")
         nextStates.foreach { next =>
           println(s"${state.id} --[$label]--> ${next.id}")

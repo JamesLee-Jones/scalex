@@ -3,7 +3,6 @@ class ParserTest
 import lexer.{Alt, Ch, Emp, Parser, RegEx, Scanner, Sequence, Star}
 import org.scalatest.flatspec.AnyFlatSpec
 
-
 class ParserFlatSpec extends AnyFlatSpec {
   def parsePrintInverse(regex: String): Unit = {
     val regex = Parser.parse(Scanner.scan("(a|b)*"))
@@ -23,31 +22,69 @@ class ParserFlatSpec extends AnyFlatSpec {
 
   "An sequence regex" should "return a Seq" in {
     assert(Parser.parse(Scanner.scan("gb")) == Sequence(Ch('g'), Ch('b')))
-    assert(Parser.parse(Scanner.scan("gb64")) == Sequence(Ch('g'), Ch('b'), Ch('6'), Ch('4')))
+    assert(
+      Parser.parse(Scanner.scan("gb64")) == Sequence(
+        Ch('g'),
+        Ch('b'),
+        Ch('6'),
+        Ch('4')
+      )
+    )
   }
 
   "An alternation" should "return an alternation with the regexes either side" in {
     assert(Parser.parse(Scanner.scan("a|b")) == Alt(Ch('a'), Ch('b')))
-    assert(Parser.parse(Scanner.scan("a1|b2")) == Alt(Sequence(Ch('a'), Ch('1')),
-                                                      Sequence(Ch('b'), Ch('2'))))
+    assert(
+      Parser.parse(Scanner.scan("a1|b2")) == Alt(
+        Sequence(Ch('a'), Ch('1')),
+        Sequence(Ch('b'), Ch('2'))
+      )
+    )
   }
 
   "Matching brackets" should "parse correctly" in {
     assert(Parser.parse(Scanner.scan("()")) == Emp)
     assert(Parser.parse(Scanner.scan("(a)")) == Ch('a'))
     assert(Parser.parse(Scanner.scan("(ab)")) == Sequence(Ch('a'), Ch('b')))
-    assert(Parser.parse(Scanner.scan("(a1)|(b2)")) == Alt(Sequence(Ch('a'), Ch('1')),
-                                                          Sequence(Ch('b'), Ch('2'))))
-    assert(Parser.parse(Scanner.scan("(a1|b)2")) == Sequence(Alt(Sequence(Ch('a'), Ch('1')), Ch('b')),
-                                                                          Ch('2')))
-    assert(Parser.parse(Scanner.scan("a(1|b)2")) == Sequence(Ch('a'), Alt(Ch('1'), Ch('b')), Ch('2')))
-    assert(Parser.parse(Scanner.scan("a(1|b2)")) == Sequence(Ch('a'), Alt(Ch('1'), Sequence(Ch('b'), Ch('2')))))
+    assert(
+      Parser.parse(Scanner.scan("(a1)|(b2)")) == Alt(
+        Sequence(Ch('a'), Ch('1')),
+        Sequence(Ch('b'), Ch('2'))
+      )
+    )
+    assert(
+      Parser.parse(Scanner.scan("(a1|b)2")) == Sequence(
+        Alt(Sequence(Ch('a'), Ch('1')), Ch('b')),
+        Ch('2')
+      )
+    )
+    assert(
+      Parser.parse(Scanner.scan("a(1|b)2")) == Sequence(
+        Ch('a'),
+        Alt(Ch('1'), Ch('b')),
+        Ch('2')
+      )
+    )
+    assert(
+      Parser.parse(Scanner.scan("a(1|b2)")) == Sequence(
+        Ch('a'),
+        Alt(Ch('1'), Sequence(Ch('b'), Ch('2')))
+      )
+    )
   }
 
   "Closure" should "bind correctly" in {
     assert(Parser.parse(Scanner.scan("a*")) == Star(Ch('a')))
-    assert(Parser.parse(Scanner.scan("ab*")) == Sequence(Ch('a'), Star(Ch('b'))))
-    assert(Parser.parse(Scanner.scan("a(1|b)*2")) == Sequence(Ch('a'), Star(Alt(Ch('1'), Ch('b'))), Ch('2')))
+    assert(
+      Parser.parse(Scanner.scan("ab*")) == Sequence(Ch('a'), Star(Ch('b')))
+    )
+    assert(
+      Parser.parse(Scanner.scan("a(1|b)*2")) == Sequence(
+        Ch('a'),
+        Star(Alt(Ch('1'), Ch('b'))),
+        Ch('2')
+      )
+    )
   }
 
   "Non matching brackets" should "throw an error" in {

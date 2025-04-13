@@ -13,7 +13,7 @@ regexp := regexp2
         | regexpr2 '|' regexp2
 
 regexp2 := regexp1
-         | regexp1 regexp 1
+         | regexp1 regexp2
          
 regexp1 := regexp0
          | regexp0 '*'

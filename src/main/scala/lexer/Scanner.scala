@@ -21,14 +21,21 @@ object Scanner {
 
     val result = ListBuffer[PositionedToken]()
     // Ignore whitespace.
-    for (char <- regex; if char != ' ') {
-      result.addOne(PositionedToken(char match {
-        case '*' => TClosure
-        case '|' => TAlternation
-        case '(' => TLeftBracket
-        case ')' => TRightBracket
-        case c   => TChar(c)
-      }, SourcePosition(line, column)))
+    for (char <- regex) {
+      if (char != ' ') {
+        result.addOne(
+          PositionedToken(
+            char match {
+              case '*' => TClosure
+              case '|' => TAlternation
+              case '(' => TLeftBracket
+              case ')' => TRightBracket
+              case c => TChar(c)
+            },
+            SourcePosition(line, column)
+          )
+        )
+      }
       column += 1
     }
     result.toList

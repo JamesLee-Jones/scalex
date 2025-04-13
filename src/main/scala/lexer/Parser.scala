@@ -15,9 +15,20 @@ object Parser {
     tokens match {
       case PositionedToken(token, pos) :: tail =>
         if (token == expected) Right(tail)
-        else Left(ParseError(s"Expected token ${expected} not equal to actual token ${token}", pos))
+        else
+          Left(
+            ParseError(
+              s"Expected token ${expected} not equal to actual token ${token}",
+              pos
+            )
+          )
       case Nil =>
-        Left(ParseError(s"Expected token ${expected} but no tokens left", SourcePosition(0,0)))
+        Left(
+          ParseError(
+            s"Expected token ${expected} but no tokens left",
+            SourcePosition(0, 0)
+          )
+        )
     }
   }
 
@@ -25,8 +36,8 @@ object Parser {
       tokens: List[PositionedToken]
   ): Either[ParseError, (List[PositionedToken], RegEx)] = {
     tokens match {
-      case Nil                                      => Right((tokens, Emp))
-      case PositionedToken(TChar(c), _) :: tail     => Right((tail, Ch(c)))
+      case Nil                                        => Right((tokens, Emp))
+      case PositionedToken(TChar(c), _) :: tail       => Right((tail, Ch(c)))
       case PositionedToken(TLeftBracket, pos) :: tail =>
         // When encountering a left bracket, parse until a matching right bracket.
         tail match {
@@ -34,15 +45,29 @@ object Parser {
           case _ =>
             for {
               (remainingTokens, regex) <- parseAlternation(tail)
-              tokensAfterBracket <- checkToken(TRightBracket, remainingTokens) match {
-                case Left(_) => Left(ParseError("Left bracket does not have a matching right bracket.", pos))
+              tokensAfterBracket <- checkToken(
+                TRightBracket,
+                remainingTokens
+              ) match {
+                case Left(_) =>
+                  Left(
+                    ParseError(
+                      "Left bracket does not have a matching right bracket.",
+                      pos
+                    )
+                  )
                 case Right(result) => Right(result)
-            }
+              }
             } yield (tokensAfterBracket, regex)
         }
 
       case PositionedToken(TAlternation, pos) :: _ =>
-        Left(ParseError(s"The left-hand side of an alternation must be an expression.", pos))
+        Left(
+          ParseError(
+            s"The left-hand side of an alternation must be an expression.",
+            pos
+          )
+        )
 
       case posTok :: _ =>
         Left(ParseError(s"Unexpected token ${posTok.token}", posTok.position))
@@ -67,8 +92,8 @@ object Parser {
     for {
       (rest, headRegex) <- parseStar(tokens)
       result <- rest match {
-        case Nil                                   => Right((rest, headRegex))
-        case PositionedToken(TAlternation, _) :: _ => Right(rest, headRegex)
+        case Nil                                    => Right((rest, headRegex))
+        case PositionedToken(TAlternation, _) :: _  => Right(rest, headRegex)
         case PositionedToken(TRightBracket, _) :: _ => Right(rest, headRegex)
         case _ =>
           for {
@@ -89,7 +114,13 @@ object Parser {
           for {
             (rest, rightRegex) <- parseSeq(tail)
             _ <- rightRegex match {
-              case Emp => Left(ParseError("The right-hand side of an alternation must be an expression.", pos))
+              case Emp =>
+                Left(
+                  ParseError(
+                    "The right-hand side of an alternation must be an expression.",
+                    pos
+                  )
+                )
               case _ => Right(())
             }
           } yield (rest, Alt(leftRegex, rightRegex))
@@ -102,7 +133,13 @@ object Parser {
     for {
       (rest, regex) <- parseAlternation(tokens)
       result <- {
-        if (rest.nonEmpty) Left(ParseError("Right bracket does not have a matching left bracket.", rest.head.position))
+        if (rest.nonEmpty)
+          Left(
+            ParseError(
+              "Right bracket does not have a matching left bracket.",
+              rest.head.position
+            )
+          )
         else Right(regex)
       }
     } yield result

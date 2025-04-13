@@ -3,11 +3,17 @@ package lexer
 import scala.collection.mutable
 
 object Parser {
-  type Parser[A] = (tokens: List[PositionedToken]) => Either[
-    ParseError,
-    (List[PositionedToken], A)
-  ]
 
+  /** Check if the head of tokens matches an expected token.
+    *
+    * @param expected
+    *   the expected token
+    * @param tokens
+    *   the list of tokens whose head is expeted to be equal to expected.
+    * @return
+    *   An error if the head of tokens doesn't match expected or the tail of
+    *   expected.
+    */
   private def checkToken(
       expected: Token,
       tokens: List[PositionedToken]
@@ -32,6 +38,14 @@ object Parser {
     }
   }
 
+  /** A function for parsing the atoms of a regular expression, either a
+    * character or a bracketed regular expression.
+    *
+    * @param tokens
+    * @return
+    *   An error if parsing fails, or a pair of the remaining tokens to parse
+    *   and the resulting regular expression.
+    */
   private def parseAtom(
       tokens: List[PositionedToken]
   ): Either[ParseError, (List[PositionedToken], RegEx)] = {
@@ -74,6 +88,13 @@ object Parser {
     }
   }
 
+  /** A function for parsing the closure operator.
+    *
+    * @param tokens
+    * @return
+    *   An error if parsing fails, or a pair of the remaining tokens to parse
+    *   and the resulting regular expression.
+    */
   private def parseStar(
       tokens: List[PositionedToken]
   ): Either[ParseError, (List[PositionedToken], RegEx)] = {
@@ -86,6 +107,13 @@ object Parser {
     } yield result
   }
 
+  /** A function for parsing a sequence of expressions.
+    *
+    * @param tokens
+    * @return
+    *   An error if parsing fails, or a pair of the remaining tokens to parse
+    *   and the resulting regular expression.
+    */
   private def parseSeq(
       tokens: List[PositionedToken]
   ): Either[ParseError, (List[PositionedToken], RegEx)] = {
@@ -103,6 +131,14 @@ object Parser {
     } yield result
   }
 
+  /** A function for parsing the alternation operator `|` of regular
+    * expressions.
+    *
+    * @param tokens
+    * @return
+    *   An error if parsing fails, or a pair of the remaining tokens to parse
+    *   and the resulting regular expression.
+    */
   private def parseAlternation(
       tokens: List[PositionedToken]
   ): Either[ParseError, (List[PositionedToken], RegEx)] = {
@@ -129,6 +165,13 @@ object Parser {
     } yield result
   }
 
+  /** A function for parsing a regular expression.
+    *
+    * @param tokens
+    * @return
+    *   An error if parsing fails, or a pair of the remaining tokens to parse
+    *   and the resulting regular expression.
+    */
   def parseRegex(tokens: List[PositionedToken]): Either[ParseError, RegEx] = {
     for {
       (rest, regex) <- parseAlternation(tokens)

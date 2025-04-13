@@ -2,7 +2,9 @@ class ScanTest
 
 import org.scalatest.flatspec.AnyFlatSpec
 import lexer.{
+  PositionedToken,
   Scanner,
+  SourcePosition,
   TAlternation,
   TChar,
   TClosure,
@@ -16,42 +18,95 @@ class ScannerFlatSpec extends AnyFlatSpec {
   }
 
   "An character" should "produce a character token" in {
-    assert(Scanner.scan("a") == List(TChar('a')))
-    assert(Scanner.scan("8") == List(TChar('8')))
+    assert(
+      Scanner.scan("a") == List(
+        PositionedToken(TChar('a'), SourcePosition(1, 1))
+      )
+    )
+    assert(
+      Scanner.scan("8") == List(
+        PositionedToken(TChar('8'), SourcePosition(1, 1))
+      )
+    )
   }
 
   "Brackets" should "produce bracket tokens" in {
-    assert(Scanner.scan("(") == List(TLeftBracket))
-    assert(Scanner.scan(")") == List(TRightBracket))
-    assert(Scanner.scan("()") == List(TLeftBracket, TRightBracket))
-    assert(Scanner.scan("((") == List(TLeftBracket, TLeftBracket))
+    assert(
+      Scanner.scan("(") == List(
+        PositionedToken(TLeftBracket, SourcePosition(1, 1))
+      )
+    )
+    assert(
+      Scanner.scan(")") == List(
+        PositionedToken(TRightBracket, SourcePosition(1, 1))
+      )
+    )
+    assert(
+      Scanner.scan("()") == List(
+        PositionedToken(TLeftBracket, SourcePosition(1, 1)),
+        PositionedToken(TRightBracket, SourcePosition(1, 2))
+      )
+    )
+    assert(
+      Scanner.scan("((") == List(
+        PositionedToken(TLeftBracket, SourcePosition(1, 1)),
+        PositionedToken(TLeftBracket, SourcePosition(1, 2))
+      )
+    )
   }
 
   "An alternation" should "return an alternation token" in {
-    assert(Scanner.scan("|") == List(TAlternation))
-    assert(Scanner.scan("||") == List(TAlternation, TAlternation))
+    assert(
+      Scanner.scan("|") == List(
+        PositionedToken(TAlternation, SourcePosition(1, 1))
+      )
+    )
+    assert(
+      Scanner.scan("||") == List(
+        PositionedToken(TAlternation, SourcePosition(1, 1)),
+        PositionedToken(TAlternation, SourcePosition(1, 2))
+      )
+    )
   }
 
   "A closure" should "return a closure token" in {
-    assert(Scanner.scan("*") == List(TClosure))
-    assert(Scanner.scan("**") == List(TClosure, TClosure))
+    assert(
+      Scanner.scan("*") == List(PositionedToken(TClosure, SourcePosition(1, 1)))
+    )
+    assert(
+      Scanner.scan("**") == List(
+        PositionedToken(TClosure, SourcePosition(1, 1)),
+        PositionedToken(TClosure, SourcePosition(1, 2))
+      )
+    )
   }
 
   "Consecutive tokens" should "be converted correctly" in {
-    assert(Scanner.scan("a*b") == List(TChar('a'), TClosure, TChar('b')))
+    assert(
+      Scanner.scan("a*b") == List(
+        PositionedToken(TChar('a'), SourcePosition(1, 1)),
+        PositionedToken(TClosure, SourcePosition(1, 2)),
+        PositionedToken(TChar('b'), SourcePosition(1, 3))
+      )
+    )
     assert(
       Scanner.scan("(a)*b") == List(
-        TLeftBracket,
-        TChar('a'),
-        TRightBracket,
-        TClosure,
-        TChar('b')
+        PositionedToken(TLeftBracket, SourcePosition(1, 1)),
+        PositionedToken(TChar('a'), SourcePosition(1, 2)),
+        PositionedToken(TRightBracket, SourcePosition(1, 3)),
+        PositionedToken(TClosure, SourcePosition(1, 4)),
+        PositionedToken(TChar('b'), SourcePosition(1, 5))
       )
     )
   }
 
   "White space" should "be ignored" in {
     assert(Scanner.scan(" ") == List())
-    assert(Scanner.scan("a b") == List(TChar('a'), TChar('b')))
+    assert(
+      Scanner.scan("a b") == List(
+        PositionedToken(TChar('a'), SourcePosition(1, 1)),
+        PositionedToken(TChar('b'), SourcePosition(1, 3))
+      )
+    )
   }
 }

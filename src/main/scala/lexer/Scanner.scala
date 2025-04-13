@@ -30,7 +30,7 @@ object Scanner {
               case '|' => TAlternation
               case '(' => TLeftBracket
               case ')' => TRightBracket
-              case c => TChar(c)
+              case c   => TChar(c)
             },
             SourcePosition(line, column)
           )

@@ -1,6 +1,7 @@
 class NFATest
 
 import lexer.{Alt, Ch, NFA, RegEx, Sequence, Star, State, regexToNfa}
+import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.collection.mutable
@@ -82,102 +83,65 @@ class NFAFlatSpec extends AnyFlatSpec {
     for (nfa <- nfas) check(nfa())
   }
 
-  extension (state: State)
-    def transitionallyEquals(obj: Any): Boolean = {
-      obj match {
-        case other: State =>
-          state.transitions.keySet == other.transitions.keySet &&
-          state.transitions.keySet.forall((key: Option[Char]) =>
-            state.transitions(key).transitionallyEquals(other.transitions(key))
-          )
-        case _ => false
-      }
-    }
-
-  extension (states1: Set[State])
-    def transitionallyEquals(states2: Set[State]): Boolean = {
-      states1.size == states2.size && states1.forall(s1 =>
-        states2.exists(s2 => s1.transitionallyEquals(s2))
+  /** Check that a breadth first search of an NFAs and the NFA produced from a
+    * regex lead to an equivalent set of transitions.
+    */
+  def checkTransitionalEquality(nfa: NFA, regEx: RegEx): Assertion = {
+    val getTransitions = (nfa: NFA, lb: ListBuffer[Option[Char]]) =>
+      nfa.traverse(
+        (_, _) => (),
+        (),
+        (transition, _) => lb.prepend(transition._2),
+        ()
       )
-    }
 
-  extension (nfa: NFA)
-    def transitionallyEquals(obj: Any): Boolean = {
-      obj match {
-        case other: NFA =>
-          nfa.initial.transitionallyEquals(other.initial) && nfa.accept
-            .transitionallyEquals(other.accept)
-        case _ => false
-      }
-    }
+    val nfaTransitions = ListBuffer[Option[Char]]()
+    val regexTransitions = ListBuffer[Option[Char]]()
+    val regexNfa = regexToNfa(regEx)
+    getTransitions(nfa, nfaTransitions)
+    getTransitions(regexNfa, regexTransitions)
+    assert(nfaTransitions === regexTransitions)
+    assert(nfa.nodeAndTransitionCount() === regexNfa.nodeAndTransitionCount())
+  }
 
   "A constant regex" should "be converted to a constant NFA" in {
-    assert(NFA.const('a').transitionallyEquals(regexToNfa(Ch('a'))))
-    assert(NFA.const('8').transitionallyEquals(regexToNfa(Ch('8'))))
+    checkTransitionalEquality(NFA.const('a'), Ch('a'))
+    checkTransitionalEquality(NFA.const('8'), Ch('8'))
   }
 
   "A sequence regex" should "be converted to a sequence NFA" in {
-    assert(
-      (NFA.const('a') ~> NFA.const('b')).transitionallyEquals(
-        regexToNfa(
-          Sequence(Ch('a'), Ch('b'))
-        )
-      )
+    checkTransitionalEquality(
+      NFA.const('a') ~> NFA.const('b'),
+      Sequence(Ch('a'), Ch('b'))
     )
-    assert(
-      (NFA.const('8') ~> NFA.const('g') ~> NFA.const('i')).transitionallyEquals(
-        regexToNfa(
-          Sequence(Ch('8'), Ch('g'), Ch('i'))
-        )
-      )
+    checkTransitionalEquality(
+      NFA.const('8') ~> NFA.const('g') ~> NFA.const('i'),
+      Sequence(Ch('8'), Ch('g'), Ch('i'))
     )
   }
 
   "An alternation regex" should "be converted to an alternation NFA" in {
-    assert(
-      (NFA.const('a') <|> NFA.const('b'))
-        .transitionallyEquals(regexToNfa(Alt(Ch('a'), Ch('b'))))
+    checkTransitionalEquality(
+      NFA.const('a') <|> NFA.const('b'),
+      Alt(Ch('a'), Ch('b'))
     )
-    assert(
-      (NFA.const('8') <|> NFA.const('g') <|> NFA.const('i'))
-        .transitionallyEquals(
-          regexToNfa(
-            Alt(Alt(Ch('8'), Ch('g')), Ch('i'))
-          )
-        )
+    checkTransitionalEquality(
+      NFA.const('8') <|> NFA.const('g') <|> NFA.const('i'),
+      Alt(Alt(Ch('8'), Ch('g')), Ch('i'))
     )
   }
 
   "A closure regex" should "be converted to a repeated NFA" in {
-    // Can't use an equality test here because comparing states loops forever. This isn't perfect but should be sufficient.
-    def check(nfa: NFA, regEx: RegEx) = {
-      val getTransitions = (nfa: NFA, lb: ListBuffer[Option[Char]]) =>
-        nfa.traverse(
-          (_, _) => (),
-          (),
-          (transition, _) => lb.prepend(transition._2),
-          ()
-        )
-
-      val nfaTransitions = ListBuffer[Option[Char]]()
-      val regexTransitions = ListBuffer[Option[Char]]()
-      val regexNfa = regexToNfa(regEx)
-      getTransitions(nfa, nfaTransitions)
-      getTransitions(regexNfa, regexTransitions)
-      assert(nfaTransitions === regexTransitions)
-      assert(nfa.nodeAndTransitionCount() === regexNfa.nodeAndTransitionCount())
-    }
-
-    check(NFA.repeat(NFA.const('a')), Star(Ch('a')))
-    check(
+    checkTransitionalEquality(NFA.repeat(NFA.const('a')), Star(Ch('a')))
+    checkTransitionalEquality(
       NFA.repeat(NFA.const('i')) ~> NFA.const('5'),
       Sequence(Star(Ch('i')), Ch('5'))
     )
-    check(
+    checkTransitionalEquality(
       NFA.const('8') ~> NFA.repeat(NFA.const('g')),
       Sequence(Ch('8'), Star(Ch('g')))
     )
-    check(
+    checkTransitionalEquality(
       NFA.repeat(NFA.const('8') ~> NFA.repeat(NFA.const('g'))),
       Star(Sequence(Ch('8'), Star(Ch('g'))))
     )
@@ -201,6 +165,6 @@ class NFAFlatSpec extends AnyFlatSpec {
       )
     )
     for (pair <- regexNfa)
-      assert(pair._1.transitionallyEquals(regexToNfa(pair._2)))
+      checkTransitionalEquality(pair._1, pair._2)
   }
 }

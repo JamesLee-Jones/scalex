@@ -1,7 +1,10 @@
 class NFATest
 
-import lexer.{Alt, Ch, NFA, Sequence, Star, State, regexToNfa}
+import lexer.{Alt, Ch, NFA, RegEx, Sequence, Star, State, regexToNfa}
 import org.scalatest.flatspec.AnyFlatSpec
+
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 class NFAFlatSpec extends AnyFlatSpec {
   "An empty NFA" should "have two nodes and one transition" in {
@@ -146,15 +149,38 @@ class NFAFlatSpec extends AnyFlatSpec {
   }
 
   "A closure regex" should "be converted to a repeated NFA" in {
-    // Can't use an equality test here because comparing states loops forever.
-    /*
-    assert(NFA.repeat(NFA.const('a')) === regexToNfa(Star(Ch('a'))))
-    assert(
-      NFA.repeat(NFA.const('8') ~> NFA.const('g')) === regexToNfa(
-        Sequence(Ch('8'), Ch('g'), Ch('i'))
-      )
+    // Can't use an equality test here because comparing states loops forever. This isn't perfect but should be sufficient.
+    def check(nfa: NFA, regEx: RegEx) = {
+      val getTransitions = (nfa: NFA, lb: ListBuffer[Option[Char]]) =>
+        nfa.traverse(
+          (_, _) => (),
+          (),
+          (transition, _) => lb.prepend(transition._2),
+          ()
+        )
+
+      val nfaTransitions = ListBuffer[Option[Char]]()
+      val regexTransitions = ListBuffer[Option[Char]]()
+      val regexNfa = regexToNfa(regEx)
+      getTransitions(nfa, nfaTransitions)
+      getTransitions(regexNfa, regexTransitions)
+      assert(nfaTransitions === regexTransitions)
+      assert(nfa.nodeAndTransitionCount() === regexNfa.nodeAndTransitionCount())
+    }
+
+    check(NFA.repeat(NFA.const('a')), Star(Ch('a')))
+    check(
+      NFA.repeat(NFA.const('i')) ~> NFA.const('5'),
+      Sequence(Star(Ch('i')), Ch('5'))
     )
-     */
+    check(
+      NFA.const('8') ~> NFA.repeat(NFA.const('g')),
+      Sequence(Ch('8'), Star(Ch('g')))
+    )
+    check(
+      NFA.repeat(NFA.const('8') ~> NFA.repeat(NFA.const('g'))),
+      Star(Sequence(Ch('8'), Star(Ch('g'))))
+    )
   }
 
   "A regex" should "be converted to an equivalent NFA" in {

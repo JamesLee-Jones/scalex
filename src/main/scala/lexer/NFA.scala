@@ -138,7 +138,7 @@ case class NFA(initial: State, var accept: Set[State]) {
     NFA(first, Set(last))
   }
 
-  private def traverse[T, R](
+  def traverse[T, R](
       stateAction: (State, T) => Unit,
       stateState: T,
       transitionAction: ((State, Option[Char], State), R) => Unit,
@@ -155,7 +155,6 @@ case class NFA(initial: State, var accept: Set[State]) {
       val state = queue.dequeue()
       stateAction(state, stateState)
       state.transitions.foreach { (char, nextStates) =>
-        val label = char.map(_.toString).getOrElse("ε")
         nextStates.foreach { next =>
           transitionAction((state, char, next), transitionState)
           if (!visited.contains(next.id)) {

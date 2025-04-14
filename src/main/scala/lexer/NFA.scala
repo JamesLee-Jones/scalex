@@ -138,14 +138,12 @@ case class NFA(initial: State, var accept: Set[State]) {
     NFA(first, Set(last))
   }
 
-  // TODO(JLJ): This can be refactored to use UniqueIdGenerator. The largest Id generated is equal to the number of edges.
-
-  /** Get the number of nodes and transitions in the current NFA.
-    * @return
-    *   The number of nodes and transitions in the current NFA.
-    */
-  def nodeAndTransitionCount(): (Int, Int) = {
-    // TODO(JLJ): Factor out duplication with printTransitions.
+  private def traverse[T, R](
+      stateAction: (State, T) => Unit,
+      stateState: T,
+      transitionAction: ((State, Option[Char], State), R) => Unit,
+      transitionState: R
+  ): Unit = {
     val visited = mutable.Set[Int]()
     val queue = mutable.Queue[State]()
     var transitions = 0
@@ -155,10 +153,11 @@ case class NFA(initial: State, var accept: Set[State]) {
 
     while (queue.nonEmpty) {
       val state = queue.dequeue()
+      stateAction(state, stateState)
       state.transitions.foreach { (char, nextStates) =>
         val label = char.map(_.toString).getOrElse("ε")
         nextStates.foreach { next =>
-          transitions += 1
+          transitionAction((state, char, next), transitionState)
           if (!visited.contains(next.id)) {
             visited += next.id
             queue.enqueue(next)
@@ -166,32 +165,34 @@ case class NFA(initial: State, var accept: Set[State]) {
         }
       }
     }
+  }
 
-    (visited.size, transitions)
+  /** Get the number of nodes and transitions in the current NFA.
+    * @return
+    *   The number of nodes and transitions in the current NFA.
+    */
+  def nodeAndTransitionCount(): (Int, Int) = {
+    var nodeCount = 0
+    var transitionCount = 0
+    traverse((_, _) => nodeCount += 1, (), (_, _) => transitionCount += 1, ())
+
+    (nodeCount, transitionCount)
   }
 
   /** Print the transitions in the current NFA.
     */
   def printTransitions(): Unit = {
-    val visited = mutable.Set[Int]()
-    val queue = mutable.Queue[State]()
-
-    queue.enqueue(this.initial)
-    visited += this.initial.id
-
-    while (queue.nonEmpty) {
-      val state = queue.dequeue()
-      state.transitions.foreach { (char, nextStates) =>
-        val label = char.map(_.toString).getOrElse("ε")
-        nextStates.foreach { next =>
-          println(s"${state.id} --[$label]--> ${next.id}")
-          if (!visited.contains(next.id)) {
-            visited += next.id
-            queue.enqueue(next)
-          }
-        }
-      }
-    }
+    val printTransition = (state: State, char: Option[Char], next: State) =>
+      println(
+        s"${state.id} --[${char.map(_.toString).getOrElse("ε")}]--> ${next.id}"
+      )
+    traverse(
+      (_, _) => (),
+      (),
+      (transition, _) =>
+        printTransition(transition._1, transition._2, transition._3),
+      ()
+    )
   }
 }
 

@@ -45,6 +45,21 @@ trait Automata[S <: AutomataState[S, F], F[A] <: Iterable[A]] {
   def initial: S
   def accept: Set[S]
 
+  /** A function for traversing an automata that takes an action on every stat
+    * and transition.
+    * @param stateAction
+    *   The action to be taken on each state.
+    * @param stateState
+    *   The state required by stateAction.
+    * @param transitionAction
+    *   The action to be taken on each transition.
+    * @param transitionState
+    *   The state required by transitionAction.
+    * @tparam T
+    *   The type of the state required by stateAction.
+    * @tparam R
+    *   The type of the state required by transitionAction
+    */
   def traverse[T, R](
       stateAction: (S, T) => Unit,
       stateState: T,

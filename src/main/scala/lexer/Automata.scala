@@ -3,6 +3,8 @@ package lexer
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
+val epsilon = None
+
 /** A class for generating unique state IDs.
   */
 object UniqueIdGenerator {

@@ -1,10 +1,5 @@
 package lexer
 
-import java.util.concurrent.atomic.AtomicInteger
-import scala.collection.mutable
-
-val epsilon = None
-
 /** A state in the NFA graph.
   *
   * @param transitions

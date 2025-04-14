@@ -3,11 +3,10 @@ package lexer
 @main
 def main(): Unit = {
   for {
-    result <- Parser.parseRegex(Scanner.scan("a|a"))
+    result <- Parser.parseRegex(Scanner.scan("a(b|c)*"))
   } do {
-    val nfa = regexToNfa(Alt(Ch('a'), Ch('a')))
-    println(nfa)
-    println(nfa.printTransitions())
-    println(nfa.nodeAndTransitionCount())
+    val dfa = nfaToDfa(regexToNfa(result))
+    dfa.printTransitions()
+    println(dfa.nodeAndTransitionCount())
   }
 }

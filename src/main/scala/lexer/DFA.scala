@@ -1,33 +1,15 @@
 package lexer
 
-import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
-val epsilon = None
-
-/** A class for generating unique state IDs.
-  */
-object UniqueIdGenerator {
-  private val counter = new AtomicInteger(0)
-  def nextId(): Int = counter.getAndIncrement()
-}
-
-/** A state in the NFA graph.
+/** A state in the DFA graph.
   *
   * @param transitions
   *   the outgoing transitions from the current state.
   */
-class State(var transitions: Map[Option[Char], Set[State]] = Map.empty) {
-  val id: Int = UniqueIdGenerator.nextId()
-
-  /** Add a transition from the current state to a new state.
-    * @param input
-    *   The character associated with the transition.
-    * @param state
-    *   The state to transition to.
-    */
-  def addTransition(char: Char, state: State): Unit =
-    addTransition(Some(char), state)
+class DFAState(var transitions: Map[Option[Char], Id[DFAState]] = Map.empty)
+    extends Iterable[DFAState]
+    with AutomataState[DFAState, Id] {
 
   /** Add a transition from the current state to a new state.
     *
@@ -37,180 +19,76 @@ class State(var transitions: Map[Option[Char], Set[State]] = Map.empty) {
     * @param state
     *   The state to transition to.
     */
-  def addTransition(maybeChar: Option[Char], state: State): Unit = {
-    transitions = transitions.updatedWith(maybeChar) {
-      case Some(states) => Some(states + state)
-      case None         => Some(Set(state))
-    }
+  def addTransition(maybeChar: Option[Char], state: DFAState): Unit = {
+    transitions += (maybeChar -> Id(state))
   }
+
+  override def iterator: Iterator[DFAState] = Iterator.single(this)
 }
 
-object NFA {
-
-  /** @return
-    *   An empty NFA.
-    */
-  def empty(): NFA = const(None)
-
-  /** Produce a constant NFA with a single transition.
-    * @param char
-    *   The character associated with the single transition.
-    * @return
-    *   A constant NFA.
-    */
-  def const(char: Char): NFA = const(Some(char))
-
-  private def const(char: Option[Char]): NFA = {
-    val start = State()
-    val end = State()
-    start.addTransition(char, end)
-    NFA(start, Set(end))
-  }
-
-  /** Produce an NFA that can be repeated zero or more times.
-    * @param automata
-    *   The NFA that can be repeated.
-    * @return
-    *   An NFA that can be repeated zero or more times.
-    */
-  def repeat(automata: NFA): NFA = {
-    val first = State()
-    val last = State()
-    first.addTransition(epsilon, automata.initial)
-    first.addTransition(epsilon, last)
-    automata.accept.foreach(state => state.addTransition(epsilon, last))
-    automata.accept.foreach(state =>
-      state.addTransition(epsilon, automata.initial)
-    )
-    NFA(first, Set(last))
-  }
-}
-
-/** A representation of an NFA.
+/** A representation of an DFA.
   * @param initial
   *   The initial state.
   * @param accept
-  *   The set of accepting states of the NFA.
+  *   The set of accepting states of the DFA.
   */
-case class NFA(initial: State, var accept: Set[State]) {
+case class DFA(initial: DFAState, var accept: Set[DFAState])
+    extends Automata[DFAState, Id]
 
-  /** Produce the NFA that represents the current NFA followed by a constant NFA
-    * that matches a character.
-    * @param that
-    *   The character to be matched following the current NFA.
-    * @return
-    *   An NFA that represents the current NFA followed by a constant NFA that
-    *   matches a character.
-    */
-  def ~>(that: Char): NFA = {
-    val automata = NFA.const(that)
-    ~>(automata)
-  }
-
-  /** Produce the NFA that represents the current NFA followed by another NFA.
-    * @param that
-    *   The NFA to be matched following the current NFA.
-    * @return
-    *   An NFA that represents the current NFA followed by another NFA.
-    */
-  def ~>(that: NFA): NFA = {
-    this.accept.foreach(state => state.addTransition(epsilon, that.initial))
-    NFA(this.initial, that.accept)
-  }
-
-  /** Produce an NFA that matches either the current NFA or a given NFA.
-    * @param that
-    *   The alternative to the current NFA.
-    * @return
-    *   An NFA that represents the current NFA followed by another NFA.
-    */
-  def <|>(that: NFA): NFA = {
-    // Add a new initial state connected to both options with an epsilon transition.
-    val first = State()
-    first.addTransition(epsilon, this.initial)
-    first.addTransition(epsilon, that.initial)
-
-    // Add a new accepting state connected to all the accepting states of both options with epsilon transitions.
-    val last = State()
-    this.accept.foreach(state => state.addTransition(epsilon, last))
-    that.accept.foreach(state => state.addTransition(epsilon, last))
-
-    NFA(first, Set(last))
-  }
-
-  def traverse[T, R](
-      stateAction: (State, T) => Unit,
-      stateState: T,
-      transitionAction: ((State, Option[Char], State), R) => Unit,
-      transitionState: R
-  ): Unit = {
-    val visited = mutable.Set[Int]()
-    val queue = mutable.Queue[State]()
-    var transitions = 0
-
-    queue.enqueue(this.initial)
-    visited += this.initial.id
-
-    while (queue.nonEmpty) {
-      val state = queue.dequeue()
-      stateAction(state, stateState)
-      state.transitions.foreach { (char, nextStates) =>
-        nextStates.foreach { next =>
-          transitionAction((state, char, next), transitionState)
-          if (!visited.contains(next.id)) {
-            visited += next.id
-            queue.enqueue(next)
-          }
-        }
-      }
-    }
-  }
-
-  /** Get the number of nodes and transitions in the current NFA.
-    * @return
-    *   The number of nodes and transitions in the current NFA.
-    */
-  def nodeAndTransitionCount(): (Int, Int) = {
-    var nodeCount = 0
-    var transitionCount = 0
-    traverse((_, _) => nodeCount += 1, (), (_, _) => transitionCount += 1, ())
-
-    (nodeCount, transitionCount)
-  }
-
-  /** Print the transitions in the current NFA.
-    */
-  def printTransitions(): Unit = {
-    val printTransition = (state: State, char: Option[Char], next: State) =>
-      println(
-        s"${state.id} --[${char.map(_.toString).getOrElse("ε")}]--> ${next.id}"
-      )
-    traverse(
-      (_, _) => (),
-      (),
-      (transition, _) =>
-        printTransition(transition._1, transition._2, transition._3),
-      ()
-    )
-  }
+def epsilonClosure(states: Set[NFAState]): Set[NFAState] = {
+  var result = states
+  states.foreach(state =>
+    if state.transitions.contains(epsilon) then
+      result = result.union(epsilonClosure(state.transitions(epsilon)))
+  )
+  result
 }
 
-/** Convert a regular expression to an NFA.
-  * @param regEx
-  *   The regular expression to be converted to an NFA.
-  * @return
-  *   An NFA that matches the same set of inputs as the given regular
-  *   expression.
-  */
-def regexToNfa(regEx: RegEx): NFA = {
-  regEx match {
-    case Emp              => NFA.empty()
-    case Ch(char)         => NFA.const(char)
-    case Alt(left, right) => regexToNfa(left) <|> regexToNfa(right)
-    case Star(inner)      => NFA.repeat(regexToNfa(inner))
-    case Sequence(regExs) =>
-      regExs.tail.foldLeft(regexToNfa(regExs.head))((nfa: NFA, regEx: RegEx) =>
-        nfa ~> regexToNfa(regEx)
+def nfaToDfa(nfa: NFA): DFA = {
+  val visited = mutable.Map[Set[Int], DFAState]()
+
+  // Declare the starting DFA state and set of accepting states.
+  val dfaInitial = DFAState()
+  val dfaAccepting = mutable.Set[DFAState]()
+
+  // Compute the epsilon closure of the initial NFA state marking each as visited.
+  val q0 = epsilonClosure(Set(nfa.initial))
+  visited += (q0.map(state => state.id) -> dfaInitial)
+
+  // Create a workQueue for traversing the NFA
+  val workQueue = mutable.Queue[(Set[NFAState], DFAState)]()
+  workQueue.enqueue((q0, dfaInitial))
+
+  while (workQueue.nonEmpty) {
+    val (q, representative) = workQueue.dequeue()
+
+    var combined: Map[Option[Char], Set[NFAState]] =
+      q.foldLeft(Map.empty)((map: Map[Option[Char], Set[NFAState]], state) =>
+        unionWith(
+          (m1: Set[NFAState], m2: Set[NFAState]) => m1.union(m2),
+          map,
+          state.transitions
+        )
       )
+
+    combined = combined.removed(epsilon)
+    combined.foreach((char, states) => {
+      val reachable = epsilonClosure(states)
+      val reachableIdSet = reachable.map(state => state.id)
+
+      if (!visited.contains(reachableIdSet)) {
+        val newRepresentative = DFAState()
+        representative.addTransition(char, newRepresentative)
+        visited += (reachableIdSet -> newRepresentative)
+        workQueue.enqueue((reachable, newRepresentative))
+      } else {
+        representative.addTransition(
+          char,
+          visited(reachable.map(state => state.id))
+        )
+      }
+    })
   }
+
+  DFA(dfaInitial, dfaAccepting.toSet)
 }

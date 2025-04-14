@@ -5,29 +5,13 @@ import scala.collection.mutable
 
 val epsilon = None
 
-/** A class for generating unique state IDs.
-  */
-object UniqueIdGenerator {
-  private val counter = new AtomicInteger(0)
-  def nextId(): Int = counter.getAndIncrement()
-}
-
 /** A state in the NFA graph.
   *
   * @param transitions
   *   the outgoing transitions from the current state.
   */
-class State(var transitions: Map[Option[Char], Set[State]] = Map.empty) {
-  val id: Int = UniqueIdGenerator.nextId()
-
-  /** Add a transition from the current state to a new state.
-    * @param input
-    *   The character associated with the transition.
-    * @param state
-    *   The state to transition to.
-    */
-  def addTransition(char: Char, state: State): Unit =
-    addTransition(Some(char), state)
+class NFAState(var transitions: Map[Option[Char], Set[NFAState]] = Map.empty)
+    extends AutomataState[NFAState, Set] {
 
   /** Add a transition from the current state to a new state.
     *
@@ -37,7 +21,7 @@ class State(var transitions: Map[Option[Char], Set[State]] = Map.empty) {
     * @param state
     *   The state to transition to.
     */
-  def addTransition(maybeChar: Option[Char], state: State): Unit = {
+  def addTransition(maybeChar: Option[Char], state: NFAState): Unit = {
     transitions = transitions.updatedWith(maybeChar) {
       case Some(states) => Some(states + state)
       case None         => Some(Set(state))
@@ -61,8 +45,8 @@ object NFA {
   def const(char: Char): NFA = const(Some(char))
 
   private def const(char: Option[Char]): NFA = {
-    val start = State()
-    val end = State()
+    val start = NFAState()
+    val end = NFAState()
     start.addTransition(char, end)
     NFA(start, Set(end))
   }
@@ -74,8 +58,8 @@ object NFA {
     *   An NFA that can be repeated zero or more times.
     */
   def repeat(automata: NFA): NFA = {
-    val first = State()
-    val last = State()
+    val first = NFAState()
+    val last = NFAState()
     first.addTransition(epsilon, automata.initial)
     first.addTransition(epsilon, last)
     automata.accept.foreach(state => state.addTransition(epsilon, last))
@@ -92,7 +76,8 @@ object NFA {
   * @param accept
   *   The set of accepting states of the NFA.
   */
-case class NFA(initial: State, var accept: Set[State]) {
+case class NFA(initial: NFAState, var accept: Set[NFAState])
+    extends Automata[NFAState, Set] {
 
   /** Produce the NFA that represents the current NFA followed by a constant NFA
     * that matches a character.
@@ -126,72 +111,16 @@ case class NFA(initial: State, var accept: Set[State]) {
     */
   def <|>(that: NFA): NFA = {
     // Add a new initial state connected to both options with an epsilon transition.
-    val first = State()
+    val first = NFAState()
     first.addTransition(epsilon, this.initial)
     first.addTransition(epsilon, that.initial)
 
     // Add a new accepting state connected to all the accepting states of both options with epsilon transitions.
-    val last = State()
+    val last = NFAState()
     this.accept.foreach(state => state.addTransition(epsilon, last))
     that.accept.foreach(state => state.addTransition(epsilon, last))
 
     NFA(first, Set(last))
-  }
-
-  def traverse[T, R](
-      stateAction: (State, T) => Unit,
-      stateState: T,
-      transitionAction: ((State, Option[Char], State), R) => Unit,
-      transitionState: R
-  ): Unit = {
-    val visited = mutable.Set[Int]()
-    val queue = mutable.Queue[State]()
-    var transitions = 0
-
-    queue.enqueue(this.initial)
-    visited += this.initial.id
-
-    while (queue.nonEmpty) {
-      val state = queue.dequeue()
-      stateAction(state, stateState)
-      state.transitions.foreach { (char, nextStates) =>
-        nextStates.foreach { next =>
-          transitionAction((state, char, next), transitionState)
-          if (!visited.contains(next.id)) {
-            visited += next.id
-            queue.enqueue(next)
-          }
-        }
-      }
-    }
-  }
-
-  /** Get the number of nodes and transitions in the current NFA.
-    * @return
-    *   The number of nodes and transitions in the current NFA.
-    */
-  def nodeAndTransitionCount(): (Int, Int) = {
-    var nodeCount = 0
-    var transitionCount = 0
-    traverse((_, _) => nodeCount += 1, (), (_, _) => transitionCount += 1, ())
-
-    (nodeCount, transitionCount)
-  }
-
-  /** Print the transitions in the current NFA.
-    */
-  def printTransitions(): Unit = {
-    val printTransition = (state: State, char: Option[Char], next: State) =>
-      println(
-        s"${state.id} --[${char.map(_.toString).getOrElse("ε")}]--> ${next.id}"
-      )
-    traverse(
-      (_, _) => (),
-      (),
-      (transition, _) =>
-        printTransition(transition._1, transition._2, transition._3),
-      ()
-    )
   }
 }
 

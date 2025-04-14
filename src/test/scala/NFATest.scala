@@ -1,6 +1,6 @@
 class NFATest
 
-import lexer.{Alt, Ch, NFA, RegEx, Sequence, Star, State, regexToNfa}
+import lexer.{Alt, Ch, NFA, RegEx, Sequence, Star, NFAState, regexToNfa}
 import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AnyFlatSpec
 

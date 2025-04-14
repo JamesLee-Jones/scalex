@@ -12,6 +12,7 @@ def unionWith[K, V](
       case (Some(v1), Some(v2)) => union(v1, v2)
       case (Some(v1), _)        => v1
       case (_, Some(v2))        => v2
+      case (None, None)         => ???
     })
   }).toMap
 }

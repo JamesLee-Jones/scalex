@@ -25,23 +25,20 @@ class State(var transitions: Map[Option[Char], Set[State]] = Map.empty) {
 }
 
 object NFA {
-  def empty(): NFA = {
+  def empty(): NFA = const(None)
+
+  def const(char: Char): NFA = const(Some(char))
+
+  private def const(char: Option[Char]): NFA = {
     val start = State()
     val end = State()
-    start.addTransition(epsilon, start)
-    NFA(start, Set(end))
-  }
-
-  def const(char: Char): NFA = {
-    val start: State = new State()
-    val end = new State()
     start.addTransition(char, end)
     NFA(start, Set(end))
   }
 
   def repeat(automata: NFA): NFA = {
-    val first = new State()
-    val last = new State()
+    val first = State()
+    val last = State()
     first.addTransition(epsilon, automata.initial)
     first.addTransition(epsilon, last)
     automata.accept.foreach(state => state.addTransition(epsilon, last))
@@ -52,7 +49,7 @@ object NFA {
   }
 }
 
-class NFA(val initial: State, var accept: Set[State]) {
+case class NFA(initial: State, var accept: Set[State]) {
   def ~>(that: Char): NFA = {
     val automata = NFA.const(that)
     ~>(automata)
@@ -64,16 +61,17 @@ class NFA(val initial: State, var accept: Set[State]) {
   }
 
   def <|>(that: NFA): NFA = {
-    val first = new State()
+    val first = State()
     first.addTransition(epsilon, this.initial)
     first.addTransition(epsilon, that.initial)
-    val last = new State()
+    val last = State()
     this.accept.foreach(state => state.addTransition(epsilon, last))
     that.accept.foreach(state => state.addTransition(epsilon, last))
     NFA(first, Set(last))
   }
 
-  def transitionCount(): Int = {
+  // TODO(JLJ): This can be refactored to use UniqueIdGenerator. The largest Id generated is equal to the number of edges.
+  def nodeAndTransitionCount(): (Int, Int) = {
     // TODO(JLJ): Factor out duplication with printTransitions.
     val visited = mutable.Set[Int]()
     val queue = mutable.Queue[State]()
@@ -96,7 +94,7 @@ class NFA(val initial: State, var accept: Set[State]) {
       }
     }
 
-    transitions
+    (visited.size, transitions)
   }
 
   def printTransitions(): Unit = {
@@ -119,5 +117,18 @@ class NFA(val initial: State, var accept: Set[State]) {
         }
       }
     }
+  }
+}
+
+def regexToNfa(regEx: RegEx): NFA = {
+  regEx match {
+    case Emp              => NFA.empty()
+    case Ch(char)         => NFA.const(char)
+    case Alt(left, right) => regexToNfa(left) <|> regexToNfa(right)
+    case Star(inner)      => NFA.repeat(regexToNfa(inner))
+    case Sequence(regExs) =>
+      regExs.tail.foldLeft(regexToNfa(regExs.head))((nfa: NFA, regEx: RegEx) =>
+        nfa ~> regexToNfa(regEx)
+      )
   }
 }

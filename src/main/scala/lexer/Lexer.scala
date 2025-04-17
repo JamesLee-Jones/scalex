@@ -21,15 +21,15 @@ object Lexer {
     import ctx.reflect.*
     // Parse the input regular expressions to an internal representation and error if they cannot be parsed.
     val parsed: Seq[(RegEx, T)] = regexToTokens match {
-      case Varargs(args) => args.map {
-        case '{ RegexToToken($regex, $token) } =>
+      case Varargs(args) =>
+        args.map { case '{ RegexToToken($regex, $token) } =>
           val lexed = Scanner.scan(regex.valueOrAbort)
           Parser.parseRegex(lexed) match {
             case Right(value) => (value, token.asInstanceOf[T])
             case Left(error) =>
               report.error(error.format); (Emp, ???)
           }
-      }
+        }
     }
 
     // Convert each regular expression to an NFA
@@ -86,7 +86,11 @@ object Lexer {
           var lexeme: String = ""
           val stack = mutable.Stack[(Int, Int)]((bad, bad))
 
-          while (state != error && (pointer < string.length) && !failed.contains(bitSetIndex(pointer, state))) {
+          while (
+            state != error && (pointer < string.length) && !failed.contains(
+              bitSetIndex(pointer, state)
+            )
+          ) {
             // Get the next character and add it to the lexeme
             val char = string(pointer)
             pointer += 1
@@ -125,42 +129,6 @@ object Lexer {
       }
     }
 
-//    val lexDecl: Symbol => Symbol = cls => Symbol.newMethod(cls, "lex", MethodType(List("input"))(_ => List(TypeRepr.of[String]), _ => TypeRepr.of[List[T]]))
-//
-//    val decls: Symbol => List[Symbol] = cls => lexDecl(cls) :: dfa.accept.map { state =>
-//      val name = s"state${state.id}"
-//      Symbol.newMethod(cls, name, MethodType(Nil)(_ => Nil, _ => TypeRepr.of[Unit]))
-//    }.toList
-//
-//
-//    val classSymb = Symbol.newClass(
-//      Symbol.spliceOwner,
-//      "GeneratedLexer",
-//      parents = List(TypeTree.of[Lexer[T]].tpe),
-//      decls = decls,
-//      selfType = None
-//    )
-//
-//    val methods: List[Statement] = dfa.accept.map { state =>
-//      val name = s"state${state.id}"
-//      val methodSymb = classSymb.declaredMethod(name).head
-//      val body = '{ println("Test") }.asTerm
-//      DefDef(methodSymb, argss => Some(body))
-//    }.toList
-//
-//    val lex: Statement = DefDef(classSymb.declaredMethod("lex").head, args => Some('{ println("HELLO WORLD"); List() }.asTerm))
-//
-//
-//    val classDef = ClassDef(
-//      classSymb,
-//      List(),
-//      body = lex :: methods
-//    )
-//
-//
-//
-//    val newClassExpr = Typed(Block(List(classDef), New(TypeIdent(classSymb))), TypeTree.of[Lexer[T]])
-//    newClassExpr.asExprOf[Lexer[T]]
     result
   }
 }
@@ -168,24 +136,3 @@ object Lexer {
 abstract class Lexer[T]() {
   def lex(input: String): List[T]
 }
-//class Lexer[T](private val regexToToken: RegexToToken[T]*) {
-//
-//  def output(outputStream: OutputStream): Unit = {
-//    val parseResult = regexToToken.map(regexToToken =>
-//      Parser.parseRegex(Scanner.scan(regexToToken.regex))
-//    )
-//
-//    val errors = parseResult.filter(res => res.isLeft)
-//    if (errors.nonEmpty) { /* Error */ }
-//
-//    val nfas = parseResult.map {
-//      case Right(regEx) => regexToNfa(regEx)
-//      case Left(_)      => NFA.empty() // Can't happen
-//    }
-//
-//    val nfa = NFA.combine(nfas)
-//    val dfa = nfaToDfa(nfa)
-//
-//    outputDfa(dfa, outputStream)
-//  }
-//}

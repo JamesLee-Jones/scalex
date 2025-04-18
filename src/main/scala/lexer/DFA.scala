@@ -57,9 +57,10 @@ def epsilonClosure(states: Set[NFAState]): Set[NFAState] = {
   * @param nfa
   *   The NFA to be converted.
   * @return
-  *   A DFA which is equivalent to nfa.
+  *   A pair of a DFA which is equivalent to the input nfa and a map from the
+  *   NFAs accepting IDs to the respective DFA accepting IDs.
   */
-def nfaToDfa(nfa: NFA): DFA = {
+def nfaToDfa(nfa: NFA): (DFA, Map[Int, Set[Int]]) = {
   // A map from the sets of states seen so far to their representative DFA state.
   val visited = mutable.Map[Set[Int], DFAState]()
 
@@ -76,6 +77,9 @@ def nfaToDfa(nfa: NFA): DFA = {
   workQueue.enqueue((q0, dfaInitial))
 
   val nfaAcceptingIds = nfa.accept.map(state => state.id)
+
+  // TODO: Can this be combined with visited for efficiency.
+  val nfaToDfaAccept = mutable.Map[Int, Set[Int]]()
 
   while (workQueue.nonEmpty) {
     // Get the next element form the workQueue
@@ -108,8 +112,16 @@ def nfaToDfa(nfa: NFA): DFA = {
         representative.addTransition(char, newRepresentative)
         visited += (reachableIdSet -> newRepresentative)
         workQueue.enqueue((reachable, newRepresentative))
-        if (reachableIdSet.intersect(nfaAcceptingIds).nonEmpty)
+
+        val reachableAccepting = reachableIdSet.intersect(nfaAcceptingIds)
+        if (reachableAccepting.nonEmpty) {
           dfaAccepting += newRepresentative
+          // TODO: Tidy this up
+          reachableAccepting.foreach(id => nfaToDfaAccept.updateWith(id) {
+            case Some(states) => Some(states + newRepresentative.id)
+            case None         => Some(Set(newRepresentative.id))
+          })
+        }
       } else {
         // If the set of states has been visited before, add a transition to the existing representative
         // to show that it can be reached from the current state.
@@ -121,5 +133,7 @@ def nfaToDfa(nfa: NFA): DFA = {
     })
   }
 
-  DFA(dfaInitial, dfaAccepting.toSet)
+  val dfa = DFA(dfaInitial, dfaAccepting.toSet)
+
+  (dfa, nfaToDfaAccept.toMap)
 }

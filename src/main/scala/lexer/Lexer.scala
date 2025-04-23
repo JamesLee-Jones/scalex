@@ -1,6 +1,6 @@
 package lexer
 
-import lexer.NFA.combine
+import lexer.NFA.{combine, empty}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -13,12 +13,21 @@ extension (regex: String)
 case class RegexToToken[T](regex: String, token: T)
 
 object Lexer {
-  inline def apply[T](inline regexToTokens: RegexToToken[T]*): Lexer[T] =
-    ${ applyImpl('{ regexToTokens }) }
+  inline def apply[T, Err](
+      inline errorBuilder: ErrorBuilder[Err],
+      inline regexToTokens: RegexToToken[T]*
+  ): Lexer[T, Err] =
+    ${ applyImpl('{ regexToTokens }, '{ errorBuilder }) }
 
-  private def applyImpl[T](
-      regexToTokens: Expr[Seq[RegexToToken[T]]]
-  )(using Type[T])(using ctx: Quotes): Expr[Lexer[T]] = {
+  inline def apply[T](
+      inline regexToTokens: RegexToToken[T]*
+  ): Lexer[T, LexerError] =
+    ${ applyImpl('{ regexToTokens }, '{ DefaultErrorBuilder() }) }
+
+  private def applyImpl[T, Err](
+      regexToTokens: Expr[Seq[RegexToToken[T]]],
+      errorBuilder: Expr[ErrorBuilder[Err]]
+  )(using Type[T], Type[Err])(using ctx: Quotes): Expr[Lexer[T, Err]] = {
     import ctx.reflect.*
     // Parse the input regular expressions to an internal representation and error if they cannot be parsed.
     val parsed: Seq[(RegEx, Expr[T])] = regexToTokens match {
@@ -30,7 +39,8 @@ object Lexer {
           Parser.parseRegex(lexed) match {
             case Right(value) => (value, token.asExprOf[T])
             case Left(error) =>
-              report.error(error.format); (Emp, ???)
+              report.error(error.format);
+              (Emp, ???) // Never reached
           }
         }
     }
@@ -90,9 +100,18 @@ object Lexer {
 
     // Produce an implementation of a lexer for the current nfa token pairs.
     val result = '{
-      new Lexer[T] {
+      new Lexer[T, Err] {
         private var string: String = ""
         private var pointer: Int = 0
+
+        // TODO: This duplicates information in transitions. Factor out.
+        private val validTransitions = mutable.HashMap[Int, Set[Char]]()
+        ${ transitionSeq }.foreach { case ((state, char), _) =>
+          validTransitions.updateWith(state) {
+            case Some(states) => Some(states + char)
+            case None         => Some(Set(char))
+          }
+        }
 
         private val transitions =
           mutable.HashMap[(Int, Char), Int]().addAll { ${ transitionSeq } }
@@ -107,10 +126,13 @@ object Lexer {
         private val bad = -2
         private val error = -1
 
+        private val eb = ${ errorBuilder }
+        private var errorMessage: Option[Err] = None
+
         private def bitSetIndex(pointer: Int, state: Int): Int =
           pointer * (${ Expr(maxId) } - ${ Expr(minId) }) + state
 
-        private def nextWord(): Option[T] = {
+        private def nextWord(): Either[Err, T] = {
           var state: Int = ${ Expr(dfa.initial.id - minId) }
           var lexeme: String = ""
           val stack = mutable.Stack[(Int, Int)]((bad, bad))
@@ -131,7 +153,15 @@ object Lexer {
 
             if transitions.contains((state, char))
             then state = transitions((state, char))
-            else state = error
+            else {
+              errorMessage = Some(
+                eb.build(
+                  eb.pos(pointer, 0),
+                  eb.unexpected(char, expected = validTransitions.getOrElse(state, Set.empty))
+                )
+              )
+              state = error
+            }
           }
 
           while (state != bad && !accept.contains(state)) {
@@ -143,12 +173,13 @@ object Lexer {
             pointer -= 1
           }
 
+          // If an accepting state is found, return the token associated with the state, otherwise return an error.
           if accept.contains(state)
-          then Some(stateToToken(state))
-          else None
+          then Right(stateToToken(state))
+          else Left(errorMessage.get)
         }
 
-        override def lex(input: String): List[T] = {
+        override def lex(input: String): Either[Err, List[T]] = {
           // Set the string to be lexed
           string = input
 
@@ -159,10 +190,17 @@ object Lexer {
           val result = ListBuffer[T]()
           // Repeatedly get words from the input.
           while (0 <= pointer && pointer < string.length) {
-            val word: Option[T] = nextWord()
-            if word.nonEmpty then result.addOne(word.get)
+            // Get the next word.
+            val wordOrErr: Either[Err, T] = nextWord()
+
+            // If the word is not accepted, return an error, otherwise add it to the result.
+            wordOrErr match {
+              case Right(word) => result.addOne(word)
+              case Left(err)   => return Left(err)
+            }
           }
-          result.result()
+
+          Right(result.result())
         }
       }
     }
@@ -171,6 +209,6 @@ object Lexer {
   }
 }
 
-abstract class Lexer[T]() {
-  def lex(input: String): List[T]
+abstract class Lexer[T, Err] {
+  def lex(input: String): Either[Err, List[T]]
 }

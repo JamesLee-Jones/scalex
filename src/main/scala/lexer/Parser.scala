@@ -148,7 +148,7 @@ object Parser {
       result <- rest match {
         case PositionedToken(TAlternation, pos) :: tail =>
           for {
-            (rest, rightRegex) <- parseSeq(tail)
+            (rest, rightRegex) <- parseAlternation(tail)
             _ <- rightRegex match {
               case Emp =>
                 Left(

@@ -11,20 +11,40 @@ class DFAFlatSpec extends AnyFlatSpec {
     assert(epsilonClosureSize(NFA.empty()) === 2)
   }
 
+  "An empty NFA" should "have one accepting state" in {
+    assert(NFA.empty().accept.size === 1)
+  }
+
   "The epsilon closure of a constant NFA" should "contain one node" in {
     assert(epsilonClosureSize(NFA.const('a')) === 1)
+  }
+
+  "A constant NFA" should "have one accepting state" in {
+    assert(NFA.const('a').accept.size === 1)
   }
 
   "The epsilon closure of a sequence NFA" should "contain one node" in {
     assert(epsilonClosureSize(NFA.const('a') ~> NFA.const('b')) === 1)
   }
 
+  "A sequence NFA" should "have one accepting state" in {
+    assert((NFA.const('a') ~> NFA.const('b')).accept.size === 1)
+  }
+
   "The epsilon closure of an alternation NFA" should "contain three node" in {
     assert(epsilonClosureSize(NFA.const('a') <|> NFA.const('b')) === 3)
   }
 
+  "An alternation NFA" should "have one accept state" in {
+    assert((NFA.const('a') <|> NFA.const('b')).accept.size === 1)
+  }
+
   "The epsilon closure of a closure NFA" should "contain three node" in {
     assert(epsilonClosureSize(NFA.repeat(NFA.const('a'))) === 3)
+  }
+
+  "A closure NFA" should "have one accept state" in {
+    assert(NFA.repeat(NFA.const('a')).accept.size === 1)
   }
 
   "The epsilon closure of an NFA with n epsilon transitions" should "contain n+1 nodes" in {

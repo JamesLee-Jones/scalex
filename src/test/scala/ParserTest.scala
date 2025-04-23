@@ -66,6 +66,12 @@ class ParserFlatSpec extends AnyFlatSpec {
         )
       )
     )
+    assert(
+      Parser.parseRegex(Scanner.scan("a|b|c")) == Right(Alt(Ch('a'), Alt(Ch('b'), Ch('c'))))
+    )
+    assert(
+      Parser.parseRegex(Scanner.scan("a|b|c|d")) == Right(Alt(Ch('a'), Alt(Ch('b'), Alt(Ch('c'), Ch('d')))))
+    )
   }
 
   "Matching brackets" should "parse correctly" in {

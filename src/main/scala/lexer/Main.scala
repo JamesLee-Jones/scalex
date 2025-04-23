@@ -1,4 +1,4 @@
 package lexer
 
 @main
-def main(): Unit = {}
+def main(outputFilePath: String): Unit = {}

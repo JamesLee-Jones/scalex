@@ -1,5 +1,7 @@
 package lexer
 
+import scala.collection.mutable
+
 /** A state in the NFA graph.
   *
   * @param transitions
@@ -44,6 +46,16 @@ object NFA {
     val end = NFAState()
     start.addTransition(char, end)
     NFA(start, Set(end))
+  }
+
+  def combine(nfas: Seq[NFA]): NFA = {
+    val initial = NFAState()
+    var accept = Set[NFAState]()
+    nfas.foreach(nfa =>
+      initial.addTransition(epsilon, nfa.initial)
+      accept = accept.union(nfa.accept)
+    )
+    NFA(initial, accept)
   }
 
   /** Produce an NFA that can be repeated zero or more times.

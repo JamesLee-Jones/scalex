@@ -43,6 +43,9 @@ trait AutomataState[T <: AutomataState[T, F], F[_]] {
   def addTransition(input: Option[Char], state: T): Unit
 }
 
+extension [T <: AutomataState[T, F], F[_]](iterable: Iterable[T])
+  private def ids(): Set[Int] = iterable.map(state => state.id).toSet
+
 trait Automata[S <: AutomataState[S, F], F[A] <: Iterable[A]] {
   def initial: S
   def accept: Set[S]
@@ -70,7 +73,6 @@ trait Automata[S <: AutomataState[S, F], F[A] <: Iterable[A]] {
   ): Unit = {
     val visited = mutable.Set[Int]()
     val queue = mutable.Queue[S]()
-    var transitions = 0
 
     queue.enqueue(initial)
     visited += initial.id
@@ -101,6 +103,20 @@ trait Automata[S <: AutomataState[S, F], F[A] <: Iterable[A]] {
     traverse((_, _) => nodeCount += 1, (), (_, _) => transitionCount += 1, ())
 
     (nodeCount, transitionCount)
+  }
+
+  def nodeIdRange(): (Int, Int) = {
+    var minimum = Int.MaxValue
+    var maximum = 0
+    traverse(
+      (s, _) => { minimum = minimum.min(s.id); maximum = maximum.max(s.id) },
+      (),
+      (_, _) => (),
+      ()
+    )
+    println(minimum)
+    println(maximum)
+    (minimum, maximum)
   }
 
   /** Print the transitions in the current Automata.

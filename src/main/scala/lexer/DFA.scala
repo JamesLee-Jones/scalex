@@ -75,6 +75,8 @@ def nfaToDfa(nfa: NFA): DFA = {
   val workQueue = mutable.Queue[(Set[NFAState], DFAState)]()
   workQueue.enqueue((q0, dfaInitial))
 
+  val nfaAcceptingIds = nfa.accept.map(state => state.id)
+
   while (workQueue.nonEmpty) {
     // Get the next element form the workQueue
     val (q, representative) = workQueue.dequeue()
@@ -106,6 +108,9 @@ def nfaToDfa(nfa: NFA): DFA = {
         representative.addTransition(char, newRepresentative)
         visited += (reachableIdSet -> newRepresentative)
         workQueue.enqueue((reachable, newRepresentative))
+
+        if (reachableIdSet.intersect(nfaAcceptingIds).nonEmpty)
+          dfaAccepting += newRepresentative
       } else {
         // If the set of states has been visited before, add a transition to the existing representative
         // to show that it can be reached from the current state.

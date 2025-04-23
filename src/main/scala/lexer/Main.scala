@@ -1,6 +1,4 @@
 package lexer
 
 @main
-def main(outputFilePath: String): Unit = {
-
-}
+def main(outputFilePath: String): Unit = {}

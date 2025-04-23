@@ -105,4 +105,20 @@ class LexerFlatSpec extends AnyFlatSpec {
     lexer1.lex("aaaa") should matchPattern { case Right(List(Tok1, Tok1)) => }
     lexer2.lex("aaaa") should matchPattern { case Right(List(Tok1, Tok1)) => }
   }
+
+  "Lexer" should "allow tokens that take strings" in {
+    case class Op(op: String) extends LexerTok
+    val lexer1 = Lexer("+|-|/" -> (op => Op(op)))
+    lexer1.lex("+") should matchPattern { case Right(List(Op("+"))) => }
+    lexer1.lex("-") should matchPattern { case Right(List(Op("-"))) => }
+    lexer1.lex("/") should matchPattern { case Right(List(Op("/"))) => }
+    lexer1.lex("+-") should matchPattern { case Right(List(Op("+"), Op("-"))) => }
+    lexer1.lex("+/-") should matchPattern { case Right(List(Op("+"), Op("/"), Op("-"))) => }
+
+    case class I(int: Int) extends LexerTok
+    val lexer2 = Lexer("10*" -> (i => I(i.toInt)))
+    lexer2.lex("1") should matchPattern { case Right(List(I(1))) => }
+    lexer2.lex("10") should matchPattern { case Right(List(I(10))) => }
+    lexer2.lex("1000") should matchPattern { case Right(List(I(1000))) => }
+  }
 }

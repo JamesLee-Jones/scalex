@@ -8,9 +8,12 @@ import scala.quoted.*
 
 extension (regex: String)
   inline def ->[T](inline token: T): RegexToToken[T] =
+    RegexToToken(regex, _ => token)
+
+  inline def ->[T](inline token: String => T): RegexToToken[T] =
     RegexToToken(regex, token)
 
-case class RegexToToken[T](regex: String, token: T)
+case class RegexToToken[T](regex: String, token: String => T)
 
 object Lexer {
   inline def apply[T, Err](
@@ -30,14 +33,14 @@ object Lexer {
   )(using Type[T], Type[Err])(using ctx: Quotes): Expr[Lexer[T, Err]] = {
     import ctx.reflect.*
     // Parse the input regular expressions to an internal representation and error if they cannot be parsed.
-    val parsed: Seq[(RegEx, Expr[T])] = regexToTokens match {
+    val parsed: Seq[(RegEx, Expr[String => T])] = regexToTokens match {
       case Varargs(args) =>
         args.map { case '{ RegexToToken($regex, $token) } =>
           // Lex each input regular expression
           val lexed = Scanner.scan(regex.valueOrAbort)
           // Parse each input regular expression, returning an informative compilation error on failure.
           Parser.parseRegex(lexed) match {
-            case Right(value) => (value, token.asExprOf[T])
+            case Right(value) => (value, token.asExprOf[String => T])
             case Left(error) =>
               report.error(error.format);
               (Emp, ???) // Never reached
@@ -46,12 +49,13 @@ object Lexer {
     }
 
     // Convert each regular expression to an NFA
-    val nfaToToken: Seq[(NFA, Expr[T])] = parsed.map { (regex, token) =>
-      (regexToNfa(regex), token)
+    val nfaToToken: Seq[(NFA, Expr[String => T])] = parsed.map {
+      (regex, token) =>
+        (regexToNfa(regex), token)
     }
 
     // Map NFA accepting states to resulting tokens.
-    val nfaAcceptingStatesToToken: mutable.HashMap[Int, Expr[T]] =
+    val nfaAcceptingStatesToToken: mutable.HashMap[Int, Expr[String => T]] =
       mutable.HashMap()
     nfaToToken.foreach((nfa, token) =>
       nfa.accept.foreach(state =>
@@ -72,7 +76,7 @@ object Lexer {
     )
 
     // Map DFA accepting states to resulting tokens.
-    var dfaAcceptToToken: Seq[Expr[(Int, T)]] = Seq()
+    var dfaAcceptToToken: Seq[Expr[(Int, String => T)]] = Seq()
     nfaToDfaAccept.foreach((nfaId, dfaIds) =>
       dfaIds.foreach(dfaId =>
         dfaAcceptToToken = dfaAcceptToToken.appended('{
@@ -119,7 +123,9 @@ object Lexer {
           mutable.HashSet().addAll { ${ acceptingStates } }
 
         private val stateToToken =
-          mutable.HashMap[Int, T]().addAll { ${ Expr.ofSeq(dfaAcceptToToken) } }
+          mutable.HashMap[Int, String => T]().addAll {
+            ${ Expr.ofSeq(dfaAcceptToToken) }
+          }
 
         private val failed = mutable.BitSet()
 
@@ -173,13 +179,13 @@ object Lexer {
             val (s, pos) = stack.pop()
             state = s
             pointer = pos
-            lexeme.dropRight(1)
+            lexeme = lexeme.dropRight(1)
             pointer -= 1
           }
 
           // If an accepting state is found, return the token associated with the state, otherwise return an error.
           if accept.contains(state)
-          then Right(stateToToken(state))
+          then Right(stateToToken(state)(lexeme))
           else Left(errorMessage.get)
         }
 

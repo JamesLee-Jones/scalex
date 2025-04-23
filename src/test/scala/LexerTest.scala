@@ -45,9 +45,15 @@ class LexerFlatSpec extends AnyFlatSpec {
     val lexer = Lexer("c|d" -> Tok1)
     lexer.lex("c") should matchPattern { case Right(List(Tok1)) => }
     lexer.lex("d") should matchPattern { case Right(List(Tok1)) => }
-    lexer.lex("ccccc") should matchPattern { case Right(List(Tok1, Tok1, Tok1, Tok1, Tok1)) => }
-    lexer.lex("dddd") should matchPattern { case Right(List(Tok1, Tok1, Tok1, Tok1)) => }
-    lexer.lex("cdcd") should matchPattern { case Right(List(Tok1, Tok1, Tok1, Tok1)) => }
+    lexer.lex("ccccc") should matchPattern {
+      case Right(List(Tok1, Tok1, Tok1, Tok1, Tok1)) =>
+    }
+    lexer.lex("dddd") should matchPattern {
+      case Right(List(Tok1, Tok1, Tok1, Tok1)) =>
+    }
+    lexer.lex("cdcd") should matchPattern {
+      case Right(List(Tok1, Tok1, Tok1, Tok1)) =>
+    }
     lexer.lex("Hello World") should matchPattern { case Left(_) => }
     lexer.lex("acd") should matchPattern { case Left(_) => }
     lexer.lex("cad") should matchPattern { case Left(_) => }
@@ -59,10 +65,16 @@ class LexerFlatSpec extends AnyFlatSpec {
     lexer.lex("a") should matchPattern { case Right(List(Tok2)) => }
     lexer.lex("1") should matchPattern { case Right(List(Tok2)) => }
     lexer.lex("a1") should matchPattern { case Right(List(Tok2, Tok2)) => }
-    lexer.lex("a11111111") should matchPattern { case Right(List(Tok2, Tok2)) => }
-    lexer.lex("11111111a") should matchPattern { case Right(List(Tok2, Tok2)) => }
-    lexer.lex("1111a1111") should matchPattern { case Right(List(Tok2, Tok2, Tok2)) => }
-    lexer.lex("11a11a1111") should matchPattern { case Right(List(Tok2, Tok2, Tok2, Tok2, Tok2)) => }
+    lexer.lex("a11111111") should matchPattern { case Right(List(Tok2, Tok2)) =>
+    }
+    lexer.lex("11111111a") should matchPattern { case Right(List(Tok2, Tok2)) =>
+    }
+    lexer.lex("1111a1111") should matchPattern {
+      case Right(List(Tok2, Tok2, Tok2)) =>
+    }
+    lexer.lex("11a11a1111") should matchPattern {
+      case Right(List(Tok2, Tok2, Tok2, Tok2, Tok2)) =>
+    }
     lexer.lex("a1cd") should matchPattern { case Left(_) => }
     lexer.lex("ca1d") should matchPattern { case Left(_) => }
     lexer.lex("1cda") should matchPattern { case Left(_) => }
@@ -75,9 +87,12 @@ class LexerFlatSpec extends AnyFlatSpec {
     lexer.lex("c") should matchPattern { case Right(List(Tok3)) => }
     lexer.lex("ab") should matchPattern { case Right(List(Tok1, Tok2)) => }
     lexer.lex("ac") should matchPattern { case Right(List(Tok1, Tok3)) => }
-    lexer.lex("abc") should matchPattern { case Right(List(Tok1, Tok2, Tok3)) => }
-    lexer.lex("bca") should matchPattern { case Right(List(Tok2, Tok3, Tok1)) => }
-    lexer.lex("cab") should matchPattern { case Right(List(Tok3, Tok1, Tok2)) => }
+    lexer.lex("abc") should matchPattern { case Right(List(Tok1, Tok2, Tok3)) =>
+    }
+    lexer.lex("bca") should matchPattern { case Right(List(Tok2, Tok3, Tok1)) =>
+    }
+    lexer.lex("cab") should matchPattern { case Right(List(Tok3, Tok1, Tok2)) =>
+    }
   }
 
   "Lexer" should "match the longest occurrence" in {

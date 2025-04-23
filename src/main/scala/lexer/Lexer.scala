@@ -159,7 +159,10 @@ object Lexer {
               errorMessage = Some(
                 eb.build(
                   eb.pos(pointer, 0),
-                  eb.unexpected(char, expected = validTransitions.getOrElse(state, Set.empty))
+                  eb.unexpected(
+                    char,
+                    expected = validTransitions.getOrElse(state, Set.empty)
+                  )
                 )
               )
             }

@@ -153,14 +153,15 @@ object Lexer {
 
             if transitions.contains((state, char))
             then state = transitions((state, char))
-            else {
+            else state = error
+
+            if (state == error || pointer >= string.length) {
               errorMessage = Some(
                 eb.build(
                   eb.pos(pointer, 0),
                   eb.unexpected(char, expected = validTransitions.getOrElse(state, Set.empty))
                 )
               )
-              state = error
             }
           }
 

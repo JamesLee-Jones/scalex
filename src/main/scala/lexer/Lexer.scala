@@ -24,7 +24,9 @@ object Lexer {
     val parsed: Seq[(RegEx, Expr[T])] = regexToTokens match {
       case Varargs(args) =>
         args.map { case '{ RegexToToken($regex, $token) } =>
+          // Lex each input regular expression
           val lexed = Scanner.scan(regex.valueOrAbort)
+          // Parse each input regular expression, returning an informative compilation error on failure.
           Parser.parseRegex(lexed) match {
             case Right(value) => (value, token.asExprOf[T])
             case Left(error) =>
@@ -47,11 +49,11 @@ object Lexer {
       )
     )
 
-    // Combine the NFAs into one NFA
+    // Combine the NFAs for each regex into one NFA.
     val nfas = nfaToToken.map((nfa, _) => nfa)
     val combinedNfa = combine(nfas)
 
-    // Convert the NFA into a DFA
+    // Convert the NFA into a DFA.
     val (dfa, nfaToDfaAccept) = nfaToDfa(combinedNfa)
 
     val (minId, maxId) = dfa.nodeIdRange()
@@ -59,21 +61,15 @@ object Lexer {
       dfa.accept.toSeq.map(s => s.id - minId)
     )
 
+    // Map DFA accepting states to resulting tokens.
     var dfaAcceptToToken: Seq[Expr[(Int, T)]] = Seq()
     nfaToDfaAccept.foreach((nfaId, dfaIds) =>
       dfaIds.foreach(dfaId =>
         dfaAcceptToToken = dfaAcceptToToken.appended('{
-          (${ Expr(dfaId-minId) }, ${ nfaAcceptingStatesToToken(nfaId) })
+          (${ Expr(dfaId - minId) }, ${ nfaAcceptingStatesToToken(nfaId) })
         })
       )
     )
-
-
-    nfaToDfaAccept
-      .map((nfaId, dfaId) =>
-        '{ (${ Expr(dfaId) }, ${ nfaAcceptingStatesToToken(nfaId) }) }
-      )
-      .toSeq
 
     // Produce a map from current state id and char to the next state.
     val transitionMap = mutable.HashMap[(Int, Char), Int]()
@@ -92,6 +88,7 @@ object Lexer {
 
     val transitionSeq: Expr[Seq[((Int, Char), Int)]] = Expr(transitionMap.toSeq)
 
+    // Produce an implementation of a lexer for the current nfa token pairs.
     val result = '{
       new Lexer[T] {
         private var string: String = ""
@@ -154,11 +151,11 @@ object Lexer {
         override def lex(input: String): List[T] = {
           // Set the string to be lexed
           string = input
-          
+
           // Reset variables needed for lexing.
           pointer = 0
           failed.clear()
-          
+
           val result = ListBuffer[T]()
           // Repeatedly get words from the input.
           while (0 <= pointer && pointer < string.length) {

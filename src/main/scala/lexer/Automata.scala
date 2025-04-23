@@ -45,7 +45,6 @@ trait AutomataState[T <: AutomataState[T, F], F[_]] {
 
 extension [T <: AutomataState[T, F], F[_]](iterable: Iterable[T])
   private def ids(): Set[Int] = iterable.map(state => state.id).toSet
-  
 
 trait Automata[S <: AutomataState[S, F], F[A] <: Iterable[A]] {
   def initial: S

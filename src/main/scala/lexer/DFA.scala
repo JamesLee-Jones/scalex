@@ -117,10 +117,12 @@ def nfaToDfa(nfa: NFA): (DFA, Map[Int, Set[Int]]) = {
         if (reachableAccepting.nonEmpty) {
           dfaAccepting += newRepresentative
           // TODO: Tidy this up
-          reachableAccepting.foreach(id => nfaToDfaAccept.updateWith(id) {
-            case Some(states) => Some(states + newRepresentative.id)
-            case None         => Some(Set(newRepresentative.id))
-          })
+          reachableAccepting.foreach(id =>
+            nfaToDfaAccept.updateWith(id) {
+              case Some(states) => Some(states + newRepresentative.id)
+              case None         => Some(Set(newRepresentative.id))
+            }
+          )
         }
       } else {
         // If the set of states has been visited before, add a transition to the existing representative
